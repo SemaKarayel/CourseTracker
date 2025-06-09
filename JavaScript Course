@@ -1,0 +1,460 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Circle, Trophy, Target, Clock, BookOpen, Calendar, Flame, StickyNote, Save, Edit3 } from 'lucide-react';
+
+const JavaScriptCourseTracker = () => {
+  // Course structure with realistic section breakdown
+  const courseData = {
+    title: "The Complete JavaScript Course 2025: From Zero to Expert!",
+    instructor: "Jonas Schmedtmann",
+    totalHours: 69.12,
+    totalLectures: 334,
+    totalSections: 21,
+    sections: [
+      { id: 1, title: "Welcome, Welcome, Welcome!", lectures: 4, duration: 0.35 },
+      { id: 2, title: "JavaScript Fundamentals – Part 1", lectures: 32, duration: 4.52 },
+      { id: 3, title: "JavaScript Fundamentals – Part 2", lectures: 26, duration: 4.32 },
+      { id: 4, title: "How to Navigate This Course", lectures: 2, duration: 0.07 },
+      { id: 5, title: "Developer Skills & Editor Setup", lectures: 12, duration: 2.65 },
+      { id: 6, title: "[OPTIONAL] HTML & CSS Crash Course", lectures: 5, duration: 0.93 },
+      { id: 7, title: "JavaScript in the Browser: DOM and Events [PROJECT]", lectures: 19, duration: 3.90 },
+      { id: 8, title: "How JavaScript Works Behind the Scenes", lectures: 15, duration: 3.43 },
+      { id: 9, title: "Data Structures, Modern Operators and Strings", lectures: 27, duration: 5.85 },
+      { id: 10, title: "A Closer Look at Functions", lectures: 14, duration: 2.67 },
+      { id: 11, title: "Working With Arrays [PROJECT]", lectures: 32, duration: 7.15 },
+      { id: 12, title: "Numbers, Dates, Intl and Timers [PROJECT]", lectures: 15, duration: 3.50 },
+      { id: 13, title: "Advanced DOM and Events [PROJECT]", lectures: 23, duration: 5.38 },
+      { id: 14, title: "Object-Oriented Programming (OOP) With JavaScript", lectures: 23, duration: 4.18 },
+      { id: 15, title: "Mapty App: OOP, Geolocation, External Libraries, and More! [PROJECT]", lectures: 16, duration: 3.98 },
+      { id: 16, title: "Asynchronous JavaScript: Promises, Async/Await, and AJAX", lectures: 24, duration: 5.03 },
+      { id: 17, title: "Modern JavaScript Development: Modules, Tooling, and Functional", lectures: 16, duration: 3.83 },
+      { id: 18, title: "Forkify App: Building a Modern Application [PROJECT]", lectures: 27, duration: 8.38 },
+      { id: 19, title: "Setting Up Git and Deployment", lectures: 7, duration: 0.98 },
+      { id: 20, title: "The End!", lectures: 2, duration: 0.07 },
+      { id: 21, title: "[LEGACY] Access the Old Course", lectures: 1, duration: 0.02 }
+    ]
+  };
+
+  // Initialize state from localStorage or defaults
+  const [completedLectures, setCompletedLectures] = useState(() => {
+    const saved = localStorage.getItem('jsCourseLectures');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [completedSections, setCompletedSections] = useState(() => {
+    const saved = localStorage.getItem('jsCourseSections');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [dailyGoal, setDailyGoal] = useState(() => {
+    const saved = localStorage.getItem('jsCourseGoal');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+
+  const [currentStreak, setCurrentStreak] = useState(() => {
+    const saved = localStorage.getItem('jsCourseStreak');
+    return saved ? parseInt(saved) : 0;
+  });
+
+  const [lastStudyDate, setLastStudyDate] = useState(() => {
+    const saved = localStorage.getItem('jsCourseLastStudy');
+    return saved ? saved : null;
+  });
+
+  const [notes, setNotes] = useState(() => {
+    const saved = localStorage.getItem('jsCourseNotes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    localStorage.setItem('jsCourseLectures', JSON.stringify(completedLectures));
+  }, [completedLectures]);
+
+  useEffect(() => {
+    localStorage.setItem('jsCourseSections', JSON.stringify(completedSections));
+  }, [completedSections]);
+
+  useEffect(() => {
+    localStorage.setItem('jsCourseGoal', dailyGoal.toString());
+  }, [dailyGoal]);
+
+  useEffect(() => {
+    localStorage.setItem('jsCourseStreak', currentStreak.toString());
+  }, [currentStreak]);
+
+  useEffect(() => {
+    if (lastStudyDate) {
+      localStorage.setItem('jsCourseLastStudy', lastStudyDate);
+    }
+  }, [lastStudyDate]);
+
+  useEffect(() => {
+    localStorage.setItem('jsCourseNotes', JSON.stringify(notes));
+  }, [notes]);
+
+  // Calculate progress
+  const totalCompletedLectures = Object.values(completedLectures).filter(Boolean).length;
+  const totalCompletedSections = Object.values(completedSections).filter(Boolean).length;
+  
+  const completedHours = courseData.sections.reduce((total, section) => {
+    const sectionLectures = Object.keys(completedLectures).filter(key => 
+      key.startsWith(`${section.id}-`)
+    ).length;
+    return total + (section.duration * (sectionLectures / section.lectures));
+  }, 0);
+
+  const progressPercentage = (totalCompletedLectures / courseData.totalLectures) * 100;
+  const remainingHours = courseData.totalHours - completedHours;
+
+  // Toggle lecture completion with auto-completion of previous lectures
+  const toggleLecture = (sectionId, lectureNum) => {
+    const key = `${sectionId}-${lectureNum}`;
+    const isCurrentlyCompleted = completedLectures[key];
+    
+    let newCompleted = { ...completedLectures };
+    
+    if (!isCurrentlyCompleted) {
+      // If marking as completed, mark all previous lectures as completed too
+      for (let i = 1; i <= lectureNum; i++) {
+        // Find which section this lecture belongs to
+        let currentLectureCount = 0;
+        for (const section of courseData.sections) {
+          const sectionStart = currentLectureCount + 1;
+          const sectionEnd = currentLectureCount + section.lectures;
+          
+          if (i >= sectionStart && i <= sectionEnd) {
+            const sectionKey = `${section.id}-${i}`;
+            newCompleted[sectionKey] = true;
+            break;
+          }
+          currentLectureCount += section.lectures;
+        }
+      }
+    } else {
+      // If unmarking, just unmark this lecture (don't affect others)
+      newCompleted[key] = false;
+    }
+    
+    setCompletedLectures(newCompleted);
+
+    // Update study date and streak
+    const today = new Date().toDateString();
+    if (!lastStudyDate || lastStudyDate !== today) {
+      setLastStudyDate(today);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (lastStudyDate === yesterday.toDateString()) {
+        setCurrentStreak(currentStreak + 1);
+      } else if (!lastStudyDate) {
+        setCurrentStreak(1);
+      } else {
+        setCurrentStreak(1);
+      }
+    }
+  };
+
+  // Toggle section completion
+  const toggleSection = (sectionId) => {
+    const section = courseData.sections.find(s => s.id === sectionId);
+    const sectionIndex = courseData.sections.findIndex(s => s.id === sectionId);
+    const isCompleted = completedSections[sectionId];
+    
+    // Calculate starting lecture number for this section
+    const startingLectureNumber = courseData.sections
+      .slice(0, sectionIndex)
+      .reduce((total, prevSection) => total + prevSection.lectures, 1);
+    
+    setCompletedSections({
+      ...completedSections,
+      [sectionId]: !isCompleted
+    });
+
+    // Update all lectures in section with sequential numbering
+    const newLectures = { ...completedLectures };
+    for (let i = 0; i < section.lectures; i++) {
+      const lectureNum = startingLectureNumber + i;
+      const key = `${sectionId}-${lectureNum}`;
+      newLectures[key] = !isCompleted;
+    }
+    setCompletedLectures(newLectures);
+  };
+
+  // Get milestone badges
+  const getMilestones = () => {
+    const milestones = [];
+    const hours = Math.floor(completedHours);
+    
+    if (hours >= 10) milestones.push({ icon: "🎯", text: "10 Hours!" });
+    if (hours >= 25) milestones.push({ icon: "🚀", text: "25 Hours!" });
+    if (hours >= 50) milestones.push({ icon: "⭐", text: "50 Hours!" });
+    if (progressPercentage >= 50) milestones.push({ icon: "🏆", text: "Halfway!" });
+    if (currentStreak >= 7) milestones.push({ icon: "🔥", text: "Week Streak!" });
+    
+    return milestones;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">JavaScript Mastery Journey</h1>
+          <p className="text-lg text-gray-600">{courseData.instructor} • {courseData.totalLectures} Lectures</p>
+        </div>
+
+        {/* Main Progress Card */}
+        <div className="bg-white rounded-3xl shadow-lg p-8 mb-6">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Progress Circle */}
+            <div className="flex flex-col items-center">
+              <div className="relative w-48 h-48">
+                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="50" cy="50" r="45"
+                    stroke="#e5e7eb" strokeWidth="8" fill="none"
+                  />
+                  <circle
+                    cx="50" cy="50" r="45"
+                    stroke="url(#gradient)" strokeWidth="8" fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={`${progressPercentage * 2.827} 282.7`}
+                    className="transition-all duration-500 ease-out"
+                  />
+                  <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#8b5cf6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-800">
+                      {Math.round(progressPercentage)}%
+                    </div>
+                    <div className="text-sm text-gray-500">Complete</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
+                <Clock className="w-6 h-6 mb-2" />
+                <div className="text-2xl font-bold">{completedHours.toFixed(1)}h</div>
+                <div className="text-blue-100 text-sm">Completed</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-4 text-white">
+                <BookOpen className="w-6 h-6 mb-2" />
+                <div className="text-2xl font-bold">{totalCompletedLectures}</div>
+                <div className="text-purple-100 text-sm">Lectures</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
+                <Target className="w-6 h-6 mb-2" />
+                <div className="text-2xl font-bold">{totalCompletedSections}</div>
+                <div className="text-green-100 text-sm">Sections</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white">
+                <Flame className="w-6 h-6 mb-2" />
+                <div className="text-2xl font-bold">{currentStreak}</div>
+                <div className="text-orange-100 text-sm">Day Streak</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-8">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>{completedHours.toFixed(1)} hours completed</span>
+              <span>{remainingHours.toFixed(1)} hours remaining</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Goal Setting */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Calendar className="w-6 h-6 text-blue-500" />
+            <h3 className="text-xl font-semibold">Daily Goal</h3>
+          </div>
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              min="0.5"
+              max="8"
+              step="0.5"
+              value={dailyGoal}
+              onChange={(e) => setDailyGoal(parseFloat(e.target.value))}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <span className="text-lg font-semibold text-gray-700 min-w-20">
+              {dailyGoal}h/day
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            At this pace, you'll complete the course in {Math.ceil(remainingHours / dailyGoal)} days
+          </p>
+        </div>
+
+        {/* Milestones */}
+        {getMilestones().length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <Trophy className="w-6 h-6 text-yellow-500" />
+              <h3 className="text-xl font-semibold">Achievements</h3>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {getMilestones().map((milestone, index) => (
+                <div key={index} className="bg-gradient-to-r from-yellow-100 to-orange-100 px-4 py-2 rounded-full border border-yellow-200">
+                  <span className="text-sm font-medium">
+                    {milestone.icon} {milestone.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <StickyNote className="w-6 h-6 text-purple-500" />
+            <h3 className="text-xl font-semibold">Course Notes</h3>
+          </div>
+          <div className="space-y-4">
+            <textarea
+              placeholder="Add your notes here... (e.g., key concepts, questions, insights)"
+              value={notes.general || ''}
+              onChange={(e) => setNotes({...notes, general: e.target.value})}
+              className="w-full h-32 p-4 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>Your notes are automatically saved</span>
+              <span>{(notes.general || '').length} characters</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Course Sections */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Course Sections</h2>
+          {courseData.sections.map((section, sectionIndex) => {
+            const sectionCompleted = completedSections[section.id];
+            
+            // Calculate starting lecture number for this section
+            const startingLectureNumber = courseData.sections
+              .slice(0, sectionIndex)
+              .reduce((total, prevSection) => total + prevSection.lectures, 1);
+            
+            const sectionLectures = Array.from({ length: section.lectures }, (_, i) => startingLectureNumber + i);
+            const completedInSection = sectionLectures.filter(lectureNum => 
+              completedLectures[`${section.id}-${lectureNum}`]
+            ).length;
+            const sectionProgress = (completedInSection / section.lectures) * 100;
+
+            return (
+              <div key={section.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div 
+                  className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => toggleSection(section.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {sectionCompleted ? (
+                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                      ) : (
+                        <Circle className="w-6 h-6 text-gray-400" />
+                      )}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          Section {section.id}: {section.title}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {section.lectures} lectures ({startingLectureNumber}-{startingLectureNumber + section.lectures - 1}) • {section.duration}h • {completedInSection}/{section.lectures} completed
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-700">
+                        {Math.round(sectionProgress)}%
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${sectionProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Lectures */}
+                <div className="px-6 pb-6">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                    {sectionLectures.map((lectureNum) => {
+                      const isCompleted = completedLectures[`${section.id}-${lectureNum}`];
+                      return (
+                        <button
+                          key={lectureNum}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLecture(section.id, lectureNum);
+                          }}
+                          className={`
+                            w-10 h-8 rounded-lg text-xs font-medium transition-all duration-200 relative
+                            ${isCompleted 
+                              ? 'bg-gradient-to-br from-green-400 to-blue-500 text-white shadow-md' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }
+                          `}
+                          title={`Lecture ${lectureNum}${isCompleted ? ' (Completed)' : ''}`}
+                        >
+                          {lectureNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Section Notes */}
+                  <div className="mt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Edit3 className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">Section Notes:</span>
+                    </div>
+                    <textarea
+                      placeholder={`Notes for ${section.title}...`}
+                      value={notes[`section-${section.id}`] || ''}
+                      onChange={(e) => setNotes({...notes, [`section-${section.id}`]: e.target.value})}
+                      className="w-full h-20 p-3 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center py-8">
+          <p className="text-gray-500">Keep going! You're doing amazing! 🚀</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default JavaScriptCourseTracker;
